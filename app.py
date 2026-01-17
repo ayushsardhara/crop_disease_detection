@@ -13,7 +13,7 @@ IMG_SIZE = 224
 MODEL_PATH = "crop_disease_model.h5"
 
 # ✅ Your Google Drive File ID
-GDRIVE_ID = "1Ti7y8CbJp7pFQF3Uql6xP-3CkoBAw-N_"
+GDRIVE_ID = "1qEzMn7luGsFB__pbOCRf9Ahma6QTu0ta"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
