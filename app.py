@@ -10,8 +10,6 @@ from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-MODEL_ZIP = "model.zip"
-MODEL_DIR = "exported_model"
 GDRIVE_ID = "1rf2LycjOUm6cRwMr4FqppzBqngRXjmuQ"
 
 # ---------------- PAGE CONFIG ----------------
@@ -36,21 +34,15 @@ class_names = [
 ]
 
 # ---------------- LOAD MODEL ----------------
+MODEL_PATH = "crop_disease_model.keras"
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_DIR):
-        url = f"https://drive.google.com/uc?id={GDRIVE_ID}"
-        with st.spinner("⬇️ Downloading AI model..."):
-            gdown.download(url, MODEL_ZIP, quiet=False)
-
-        import zipfile
-        with zipfile.ZipFile(MODEL_ZIP, "r") as z:
-            z.extractall()
-
-    return tf.keras.models.load_model(MODEL_DIR, compile=False)
+    if not os.path.exists(MODEL_PATH):
+        st.error("Model file not found: crop_disease_model.keras")
+        st.stop()
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 model = load_model()
-
 # ---------------- CROP LIST ----------------
 crop_list = sorted(list(set([c.split("___")[0] for c in class_names])))
 
