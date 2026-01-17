@@ -10,8 +10,9 @@ from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-MODEL_PATH = "crop_disease_model.keras"
-GDRIVE_ID = "1Dsob5iAVbEytWyndilk6FSJ9wuRXzWmr"
+MODEL_ZIP = "model.zip"
+MODEL_DIR = "exported_model"
+GDRIVE_ID = "1rf2LycjOUm6cRwMr4FqppzBqngRXjmuQ"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
@@ -37,11 +38,16 @@ class_names = [
 # ---------------- LOAD MODEL ----------------
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
+    if not os.path.exists(MODEL_DIR):
         url = f"https://drive.google.com/uc?id={GDRIVE_ID}"
         with st.spinner("⬇️ Downloading AI model..."):
-            gdown.download(url, MODEL_PATH, quiet=False)
-    return tf.keras.models.load_model(MODEL_PATH, compile=False)
+            gdown.download(url, MODEL_ZIP, quiet=False)
+
+        import zipfile
+        with zipfile.ZipFile(MODEL_ZIP, "r") as z:
+            z.extractall()
+
+    return tf.keras.models.load_model(MODEL_DIR, compile=False)
 
 model = load_model()
 
