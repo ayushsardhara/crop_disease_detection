@@ -4,68 +4,101 @@ import numpy as np
 import cv2
 import os
 from PIL import Image
+import gdown
 from disease_info import disease_data
 
+# ---------------- SETTINGS ----------------
 IMG_SIZE = 224
 MODEL_PATH = "crop_disease_model.h5"
-DATASET_PATH = "plantvillage_dataset/color"
 
-st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱")
+# ✅ Your Google Drive File ID
+GDRIVE_ID = "1Ti7y8CbJp7pFQF3Uql6xP-3CkoBAw-N_"
 
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
+
+# ---------------- CLASS NAMES (NO DATASET NEEDED) ----------------
+class_names = [
+'Apple___Apple_scab','Apple___Black_rot','Apple___Cedar_apple_rust','Apple___healthy',
+'Blueberry___healthy','Cherry_(including_sour)___Powdery_mildew','Cherry_(including_sour)___healthy',
+'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot','Corn_(maize)___Common_rust_',
+'Corn_(maize)___Northern_Leaf_Blight','Corn_(maize)___healthy',
+'Grape___Black_rot','Grape___Esca_(Black_Measles)','Grape___Leaf_blight_(Isariopsis_Leaf_Spot','Grape___healthy',
+'Orange___Haunglongbing_(Citrus_greening)','Peach___Bacterial_spot','Peach___healthy',
+'Pepper,_bell___Bacterial_spot','Pepper,_bell___healthy',
+'Potato___Early_blight','Potato___Late_blight','Potato___healthy',
+'Raspberry___healthy','Soybean___healthy','Squash___Powdery_mildew',
+'Strawberry___Leaf_scorch','Strawberry___healthy',
+'Tomato___Bacterial_spot','Tomato___Early_blight','Tomato___Late_blight','Tomato___Leaf_Mold',
+'Tomato___Septoria_leaf_spot','Tomato___Spider_mites Two-spotted_spider_mite',
+'Tomato___Target_Spot','Tomato___Tomato_Yellow_Leaf_Curl_Virus','Tomato___Tomato_mosaic_virus',
+'Tomato___healthy'
+]
+
+# ---------------- LOAD MODEL FROM GOOGLE DRIVE ----------------
 @st.cache_resource
 def load_model():
+    if not os.path.exists(MODEL_PATH):
+        url = f"https://drive.google.com/uc?id={GDRIVE_ID}"
+        with st.spinner("⬇️ Downloading AI model... Please wait"):
+            gdown.download(url, MODEL_PATH, quiet=False)
     return tf.keras.models.load_model(MODEL_PATH)
 
 model = load_model()
-class_names = sorted(os.listdir(DATASET_PATH))
 
-# Crop list
+# ---------------- CROP LIST ----------------
 crop_list = sorted(list(set([c.split("___")[0] for c in class_names])))
 
-st.title("🌿 Smart Crop Health Detection System")
+# ---------------- HEADER ----------------
+st.markdown("<h1 style='text-align:center;'>🌿 Smart Crop Health Detection System</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>AI based leaf disease detection using Deep Learning</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-# ---- HISTORY ----
+# ---------------- SESSION HISTORY ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# ---- UI ----
+# ---------------- UI LAYOUT ----------------
 col1, col2 = st.columns(2)
 
 with col1:
     selected_crop = st.selectbox("🌾 Select Crop", crop_list)
-    uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg","png","jpeg"])
+    uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "png", "jpeg"])
 
 with col2:
     st.markdown("### 🧠 Model Info")
-    st.write("CNN: MobileNetV2")
-    st.write("Accuracy: ~95%")
-    st.write("Classes:", len(class_names))
+    st.write("CNN Model: MobileNetV2")
+    st.write("Transfer Learning")
+    st.write("Validation Accuracy: ~95%")
+    st.write("Total Classes:", len(class_names))
 
+# ---------------- IMAGE + PREDICTION ----------------
 if uploaded_file:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_container_width=True)
+    st.image(image, caption="Uploaded Leaf Image", use_container_width=True)
 
     img = np.array(image)
     img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
     img = img / 255.0
     img = np.expand_dims(img, axis=0)
 
-    if st.button("🔍 Detect Disease"):
-        pred = model.predict(img)[0]
+    if st.button("🔍 Detect Disease", use_container_width=True):
+        with st.spinner("Analyzing image..."):
+            pred = model.predict(img)[0]
 
-        # Filter by crop
-        crop_indices = [i for i,c in enumerate(class_names) if c.startswith(selected_crop)]
+        # Filter predictions by selected crop
+        crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
         crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
         crop_preds.sort(key=lambda x: x[1], reverse=True)
 
         disease, confidence = crop_preds[0]
 
-        st.success(f"🌿 Disease: {disease}")
-        st.progress(int(confidence*100))
-        st.write(f"Confidence: {confidence*100:.2f}%")
+        st.success(f"🌿 Disease Detected: {disease}")
+        st.progress(int(confidence * 100))
+        st.write(f"Confidence: **{confidence*100:.2f}%**")
 
         # Save history
-        st.session_state.history.append((disease, round(confidence*100,2)))
+        st.session_state.history.append((disease, round(confidence * 100, 2)))
 
         # Disease info
         if disease in disease_data:
@@ -74,13 +107,16 @@ if uploaded_file:
             st.write("**Symptoms:**", disease_data[disease]["symptoms"])
             st.write("**Prevention:**", disease_data[disease]["prevention"])
         else:
-            st.info("No additional info available for this disease.")
+            st.info("No additional disease information available.")
 
-# ---- HISTORY PANEL ----
+# ---------------- HISTORY PANEL ----------------
 st.markdown("---")
-st.markdown("### 🧾 Detection History")
+st.markdown("### 🧾 Detection History (Last 5)")
 
-for d,c in st.session_state.history[-5:][::-1]:
+for d, c in st.session_state.history[-5:][::-1]:
     st.write(f"• {d} — {c}%")
 
-st.warning("⚠️ Educational purpose only. Not a replacement for expert advice.")
+st.warning("⚠️ This system is for educational purposes only. Not a replacement for professional agricultural advice.")
+
+st.markdown("<p style='text-align:center; font-size:13px;'>Developed by CSE Students using Deep Learning</p>", unsafe_allow_html=True)
+
