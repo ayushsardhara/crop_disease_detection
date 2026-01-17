@@ -42,14 +42,21 @@ class_names = [
 def load_model():
     if not os.path.exists(MODEL_DIR):
         url = f"https://drive.google.com/uc?id={GDRIVE_ID}&confirm=t"
-        with st.spinner("⬇️ Downloading AI model... Please wait"):
+        with st.spinner("⬇️ Downloading AI model..."):
             gdown.download(url, MODEL_ZIP, quiet=False, fuzzy=True)
 
         import zipfile
-        with zipfile.ZipFile(MODEL_ZIP, 'r') as zip_ref:
+        with zipfile.ZipFile(MODEL_ZIP, "r") as zip_ref:
             zip_ref.extractall()
 
-    return tf.keras.models.load_model(MODEL_DIR, compile=False)
+    # 🔍 find folder that contains saved_model.pb
+    for root, dirs, files in os.walk("."):
+        if "saved_model.pb" in files:
+            return tf.keras.models.load_model(root, compile=False)
+
+    st.error("❌ saved_model.pb not found after extracting ZIP")
+    st.stop()
+
 
 model = load_model()
 
