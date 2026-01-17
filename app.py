@@ -10,7 +10,8 @@ from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-MODEL_PATH = "crop_disease_model.h5"
+MODEL_PATH = "crop_disease_model.keras"
+
 
 # ✅ Your Google Drive File ID
 GDRIVE_ID = "1qEzMn7luGsFB__pbOCRf9Ahma6QTu0ta"
