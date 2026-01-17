@@ -1,6 +1,6 @@
 import streamlit as st
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')  # force CPU, avoid GPU plugin errors
+tf.config.set_visible_devices([], 'GPU')  # force CPU
 import numpy as np
 import cv2
 import os
@@ -10,23 +10,20 @@ from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-MODEL_ZIP = "model.zip"
-MODEL_DIR = "crop_disease_savedmodel"
-
-GDRIVE_ID = "1NXq-OVzyaNQ-ZgbDQmNTTrE_tequj1ke"
-
+MODEL_PATH = "crop_disease_model.keras"
+GDRIVE_ID = "1Dsob5iAVbEytWyndilk6FSJ9wuRXzWmr"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
 
-# ---------------- CLASS NAMES (NO DATASET NEEDED) ----------------
+# ---------------- CLASS NAMES ----------------
 class_names = [
 'Apple___Apple_scab','Apple___Black_rot','Apple___Cedar_apple_rust','Apple___healthy',
 'Blueberry___healthy','Cherry_(including_sour)___Powdery_mildew','Cherry_(including_sour)___healthy',
 'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot','Corn_(maize)___Common_rust_',
 'Corn_(maize)___Northern_Leaf_Blight','Corn_(maize)___healthy',
-'Grape___Black_rot','Grape___Esca_(Black_Measles)','Grape___Leaf_blight_(Isariopsis_Leaf_Spot','Grape___healthy',
-'Orange___Haunglongbing_(Citrus_greening)','Peach___Bacterial_spot','Peach___healthy',
+'Grape___Black_rot','Grape___Esca_(Black_Measles)','Grape___Leaf_blight_(Isariopsis_Leaf_Spot)',
+'Grape___healthy','Orange___Haunglongbing_(Citrus_greening)','Peach___Bacterial_spot','Peach___healthy',
 'Pepper,_bell___Bacterial_spot','Pepper,_bell___healthy',
 'Potato___Early_blight','Potato___Late_blight','Potato___healthy',
 'Raspberry___healthy','Soybean___healthy','Squash___Powdery_mildew',
@@ -37,26 +34,14 @@ class_names = [
 'Tomato___healthy'
 ]
 
-# ---------------- LOAD MODEL FROM GOOGLE DRIVE ----------------
+# ---------------- LOAD MODEL ----------------
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_DIR):
-        url = f"https://drive.google.com/uc?id={GDRIVE_ID}&confirm=t"
+    if not os.path.exists(MODEL_PATH):
+        url = f"https://drive.google.com/uc?id={GDRIVE_ID}"
         with st.spinner("⬇️ Downloading AI model..."):
-            gdown.download(url, MODEL_ZIP, quiet=False, fuzzy=True)
-
-        import zipfile
-        with zipfile.ZipFile(MODEL_ZIP, "r") as zip_ref:
-            zip_ref.extractall()
-
-    # 🔍 find folder that contains saved_model.pb
-    for root, dirs, files in os.walk("."):
-        if "saved_model.pb" in files:
-            return tf.keras.models.load_model(root, compile=False)
-
-    st.error("❌ saved_model.pb not found after extracting ZIP")
-    st.stop()
-
+            gdown.download(url, MODEL_PATH, quiet=False)
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 model = load_model()
 
@@ -72,7 +57,7 @@ st.markdown("---")
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# ---------------- UI LAYOUT ----------------
+# ---------------- UI ----------------
 col1, col2 = st.columns(2)
 
 with col1:
@@ -86,9 +71,9 @@ with col2:
     st.write("Validation Accuracy: ~95%")
     st.write("Total Classes:", len(class_names))
 
-# ---------------- IMAGE + PREDICTION ----------------
+# ---------------- PREDICTION ----------------
 if uploaded_file:
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Leaf Image", use_container_width=True)
 
     img = np.array(image)
@@ -100,7 +85,6 @@ if uploaded_file:
         with st.spinner("Analyzing image..."):
             pred = model.predict(img)[0]
 
-        # Filter predictions by selected crop
         crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
         crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
         crop_preds.sort(key=lambda x: x[1], reverse=True)
@@ -111,10 +95,8 @@ if uploaded_file:
         st.progress(int(confidence * 100))
         st.write(f"Confidence: **{confidence*100:.2f}%**")
 
-        # Save history
         st.session_state.history.append((disease, round(confidence * 100, 2)))
 
-        # Disease info
         if disease in disease_data:
             st.markdown("### 📘 Disease Information")
             st.write("**Cause:**", disease_data[disease]["cause"])
@@ -123,14 +105,11 @@ if uploaded_file:
         else:
             st.info("No additional disease information available.")
 
-# ---------------- HISTORY PANEL ----------------
+# ---------------- HISTORY ----------------
 st.markdown("---")
 st.markdown("### 🧾 Detection History (Last 5)")
-
 for d, c in st.session_state.history[-5:][::-1]:
     st.write(f"• {d} — {c}%")
 
-st.warning("⚠️ This system is for educational purposes only. Not a replacement for professional agricultural advice.")
-
+st.warning("⚠️ Educational purpose only. Not a replacement for expert advice.")
 st.markdown("<p style='text-align:center; font-size:13px;'>Developed by CSE Students using Deep Learning</p>", unsafe_allow_html=True)
-
