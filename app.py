@@ -41,10 +41,11 @@ class_names = [
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_PATH):
-        url = f"https://drive.google.com/uc?id={GDRIVE_ID}"
+        url = f"https://drive.google.com/uc?id={GDRIVE_ID}&confirm=t"
         with st.spinner("⬇️ Downloading AI model... Please wait"):
-            gdown.download(url, MODEL_PATH, quiet=False)
-    return tf.keras.models.load_model(MODEL_PATH)
+            gdown.download(url, MODEL_PATH, quiet=False, fuzzy=True)
+    return tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
+
 
 model = load_model()
 
