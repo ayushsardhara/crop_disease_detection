@@ -1,5 +1,6 @@
 import streamlit as st
 import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')  # force CPU, avoid GPU plugin errors
 import numpy as np
 import cv2
 import os
