@@ -10,11 +10,11 @@ from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-MODEL_PATH = "crop_disease_model.keras"
+MODEL_ZIP = "model.zip"
+MODEL_DIR = "crop_disease_savedmodel"
 
+GDRIVE_ID = "1NXq-OVzyaNQ-ZgbDQmNTTrE_tequj1ke"
 
-# ✅ Your Google Drive File ID
-GDRIVE_ID = "1qEzMn7luGsFB__pbOCRf9Ahma6QTu0ta"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
@@ -40,12 +40,16 @@ class_names = [
 # ---------------- LOAD MODEL FROM GOOGLE DRIVE ----------------
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
+    if not os.path.exists(MODEL_DIR):
         url = f"https://drive.google.com/uc?id={GDRIVE_ID}&confirm=t"
         with st.spinner("⬇️ Downloading AI model... Please wait"):
-            gdown.download(url, MODEL_PATH, quiet=False, fuzzy=True)
-    return tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
+            gdown.download(url, MODEL_ZIP, quiet=False, fuzzy=True)
 
+        import zipfile
+        with zipfile.ZipFile(MODEL_ZIP, 'r') as zip_ref:
+            zip_ref.extractall()
+
+    return tf.keras.models.load_model(MODEL_DIR, compile=False)
 
 model = load_model()
 
