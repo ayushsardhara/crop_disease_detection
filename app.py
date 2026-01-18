@@ -1,16 +1,16 @@
 import streamlit as st
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')  # force CPU
 import numpy as np
 import cv2
 import os
 from PIL import Image
-import gdown
+import zipfile
 from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
 IMG_SIZE = 224
-GDRIVE_ID = "1rf2LycjOUm6cRwMr4FqppzBqngRXjmuQ"
+MODEL_ZIP = "exported_model.zip"
+MODEL_DIR = "exported_model"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
@@ -33,16 +33,25 @@ class_names = [
 'Tomato___healthy'
 ]
 
-# ---------------- LOAD MODEL ----------------
-MODEL_PATH = "crop_disease_model.keras"
+# ---------------- LOAD MODEL USING TFSMLAYER ----------------
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
-        st.error("Model file not found: crop_disease_model.keras")
-        st.stop()
-    return tf.keras.models.load_model(MODEL_PATH, compile=False)
+    if not os.path.exists(MODEL_DIR):
+        with zipfile.ZipFile(MODEL_ZIP, "r") as z:
+            z.extractall()
+
+    layer = tf.keras.layers.TFSMLayer(
+        MODEL_DIR, call_endpoint="serving_default"
+    )
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.InputLayer(shape=(224, 224, 3)),
+        layer
+    ])
+    return model
 
 model = load_model()
+
 # ---------------- CROP LIST ----------------
 crop_list = sorted(list(set([c.split("___")[0] for c in class_names])))
 
@@ -65,8 +74,7 @@ with col1:
 with col2:
     st.markdown("### 🧠 Model Info")
     st.write("CNN Model: MobileNetV2")
-    st.write("Transfer Learning")
-    st.write("Validation Accuracy: ~95%")
+    st.write("SavedModel via TFSMLayer (Keras 3 compatible)")
     st.write("Total Classes:", len(class_names))
 
 # ---------------- PREDICTION ----------------
@@ -81,7 +89,7 @@ if uploaded_file:
 
     if st.button("🔍 Detect Disease", use_container_width=True):
         with st.spinner("Analyzing image..."):
-            pred = model.predict(img)[0]
+            pred = model(img).numpy()[0]
 
         crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
         crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
@@ -111,3 +119,4 @@ for d, c in st.session_state.history[-5:][::-1]:
 
 st.warning("⚠️ Educational purpose only. Not a replacement for expert advice.")
 st.markdown("<p style='text-align:center; font-size:13px;'>Developed by CSE Students using Deep Learning</p>", unsafe_allow_html=True)
+
