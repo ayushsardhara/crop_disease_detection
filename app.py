@@ -89,7 +89,14 @@ if uploaded_file:
 
     if st.button("🔍 Detect Disease", use_container_width=True):
         with st.spinner("Analyzing image..."):
-            pred = model(img).numpy()[0]
+            out = model(img)
+
+# If model returns dict (SavedModel), get first value
+if isinstance(out, dict):
+    out = list(out.values())[0]
+
+pred = out.numpy()[0]
+
 
         crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
         crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
