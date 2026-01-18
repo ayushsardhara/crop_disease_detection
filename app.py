@@ -15,6 +15,34 @@ MODEL_DIR = "exported_model"
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Crop Health AI", page_icon="🌱", layout="centered")
 
+# ---------------- CUSTOM CSS ----------------
+st.markdown("""
+<style>
+.main { background-color: #f6fff8; }
+
+.card {
+    background-color: white;
+    padding: 18px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 15px;
+}
+
+.title {
+    color: #2f855a;
+    font-size: 34px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.subtitle {
+    text-align: center;
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- CLASS NAMES ----------------
 class_names = [
 'Apple___Apple_scab','Apple___Black_rot','Apple___Cedar_apple_rust','Apple___healthy',
@@ -33,7 +61,7 @@ class_names = [
 'Tomato___healthy'
 ]
 
-# ---------------- LOAD MODEL USING TFSMLAYER ----------------
+# ---------------- LOAD MODEL (KERAS 3 SAFE) ----------------
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_DIR):
@@ -56,26 +84,34 @@ model = load_model()
 crop_list = sorted(list(set([c.split("___")[0] for c in class_names])))
 
 # ---------------- HEADER ----------------
-st.markdown("<h1 style='text-align:center;'>🌿 Smart Crop Health Detection System</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>AI based leaf disease detection using Deep Learning</p>", unsafe_allow_html=True)
-st.markdown("---")
+st.markdown("<div class='title'>🌿 Smart Crop Health Detection</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>AI based Leaf Disease Detection using Deep Learning</div>", unsafe_allow_html=True)
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ---------------- SESSION HISTORY ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- UI ----------------
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    selected_crop = st.selectbox("🌾 Select Crop", crop_list)
-    uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "png", "jpeg"])
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("### 🌾 Select Crop")
+    selected_crop = st.selectbox("", crop_list)
+
+    st.markdown("### 📤 Upload Leaf Image")
+    uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"])
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("### 🧠 Model Info")
-    st.write("CNN Model: MobileNetV2")
-    st.write("SavedModel via TFSMLayer (Keras 3 compatible)")
-    st.write("Total Classes:", len(class_names))
+    st.write("• CNN with Transfer Learning")
+    st.write("• Dataset: PlantVillage")
+    st.write("• Total Classes:", len(class_names))
+    st.write("• Keras‑3 Compatible Inference")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- PREDICTION ----------------
 if uploaded_file:
@@ -98,30 +134,43 @@ if uploaded_file:
             pred = out.numpy()[0]
 
         crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
-        crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
+        crop_preds = [(class_names[i], float(pred[i])) for i in crop_indices]
         crop_preds.sort(key=lambda x: x[1], reverse=True)
 
         disease, confidence = crop_preds[0]
 
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+
         st.success(f"🌿 Disease Detected: {disease}")
+        st.write(f"### ✅ Confidence: {confidence*100:.2f}%")
         st.progress(int(confidence * 100))
-        st.write(f"Confidence: **{confidence*100:.2f}%**")
 
-        st.session_state.history.append((disease, round(confidence * 100, 2)))
+        # -------- BAR CHART --------
+        st.markdown("### 📊 Top Predictions")
 
+        top5 = crop_preds[:5]
+        labels = [d.split("___")[1].replace("_", " ") for d, _ in top5]
+        values = [v for _, v in top5]
+
+        st.bar_chart({"Confidence": values}, x=labels, y="Confidence")
+
+        # -------- DISEASE INFO --------
         if disease in disease_data:
             st.markdown("### 📘 Disease Information")
             st.write("**Cause:**", disease_data[disease]["cause"])
             st.write("**Symptoms:**", disease_data[disease]["symptoms"])
             st.write("**Prevention:**", disease_data[disease]["prevention"])
-        else:
-            st.info("No additional disease information available.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.session_state.history.append((disease, round(confidence * 100, 2)))
 
 # ---------------- HISTORY ----------------
-st.markdown("---")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.markdown("### 🧾 Detection History (Last 5)")
 for d, c in st.session_state.history[-5:][::-1]:
     st.write(f"• {d} — {c}%")
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.warning("⚠️ Educational purpose only. Not a replacement for expert advice.")
 st.markdown("<p style='text-align:center; font-size:13px;'>Developed by CSE Students using Deep Learning</p>", unsafe_allow_html=True)
