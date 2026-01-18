@@ -91,12 +91,11 @@ if uploaded_file:
         with st.spinner("Analyzing image..."):
             out = model(img)
 
-# If model returns dict (SavedModel), get first value
-if isinstance(out, dict):
-    out = list(out.values())[0]
+            # TFSMLayer may return dict
+            if isinstance(out, dict):
+                out = list(out.values())[0]
 
-pred = out.numpy()[0]
-
+            pred = out.numpy()[0]
 
         crop_indices = [i for i, c in enumerate(class_names) if c.startswith(selected_crop)]
         crop_preds = [(class_names[i], pred[i]) for i in crop_indices]
