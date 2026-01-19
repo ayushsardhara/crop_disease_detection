@@ -41,6 +41,24 @@ st.markdown("""
     color: #4a5568;
     margin-bottom: 10px;
 }
+
+.badge-healthy {
+    background-color: #38a169;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.badge-disease {
+    background-color: #e53e3e;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    display: inline-block;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,11 +116,20 @@ col1, col2 = st.columns([1, 1])
 
 with col1:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
+
     st.markdown("### 🌾 Select Crop")
     selected_crop = st.selectbox("", crop_list)
 
-    st.markdown("### 📤 Upload Leaf Image")
-    uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"])
+    st.markdown("### 📤 Upload or Capture Image")
+
+    input_mode = st.radio("", ["Upload Image", "Use Camera"], horizontal=True)
+
+    uploaded_file = None
+    if input_mode == "Upload Image":
+        uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"])
+    else:
+        uploaded_file = st.camera_input("Take a picture")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
@@ -117,7 +144,7 @@ with col2:
 # ---------------- PREDICTION ----------------
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Leaf Image", use_container_width=True)
+    st.image(image, caption="Leaf Image", use_container_width=True)
 
     img = np.array(image)
     img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
@@ -128,7 +155,6 @@ if uploaded_file:
         with st.spinner("Analyzing image..."):
             out = model(img)
 
-            # TFSMLayer may return dict
             if isinstance(out, dict):
                 out = list(out.values())[0]
 
@@ -140,10 +166,17 @@ if uploaded_file:
 
         disease, confidence = crop_preds[0]
 
+        is_healthy = "healthy" in disease.lower()
+
         st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-        st.success(f"🌿 Disease Detected: {disease}")
-        st.write(f"### ✅ Confidence: {confidence*100:.2f}%")
+        if is_healthy:
+            st.markdown("<span class='badge-healthy'>✅ Healthy Leaf</span>", unsafe_allow_html=True)
+        else:
+            st.markdown("<span class='badge-disease'>⚠️ Diseased Leaf</span>", unsafe_allow_html=True)
+
+        st.markdown(f"### 🌿 Result: {disease}")
+        st.write(f"### 🎯 Confidence: {confidence*100:.2f}%")
         st.progress(int(confidence * 100))
 
         # -------- BAR CHART --------
