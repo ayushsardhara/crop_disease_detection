@@ -146,13 +146,20 @@ if uploaded_file:
         st.progress(int(confidence * 100))
 
         # -------- BAR CHART --------
-        st.markdown("### 📊 Top Predictions")
+st.markdown("### 📊 Top Predictions")
 
-        top5 = crop_preds[:5]
-        labels = [d.split("___")[1].replace("_", " ") for d, _ in top5]
-        values = [v for _, v in top5]
+top5 = crop_preds[:5]
+labels = [d.split("___")[1].replace("_", " ") for d, _ in top5]
+values = [v for _, v in top5]
 
-        st.bar_chart({"Confidence": values}, x=labels, y="Confidence")
+import pandas as pd
+chart_df = pd.DataFrame({
+    "Disease": labels,
+    "Confidence": values
+})
+
+st.bar_chart(chart_df.set_index("Disease"))
+
 
         # -------- DISEASE INFO --------
         if disease in disease_data:
