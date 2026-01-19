@@ -5,6 +5,7 @@ import cv2
 import os
 from PIL import Image
 import zipfile
+import pandas as pd
 from disease_info import disease_data
 
 # ---------------- SETTINGS ----------------
@@ -146,20 +147,18 @@ if uploaded_file:
         st.progress(int(confidence * 100))
 
         # -------- BAR CHART --------
-st.markdown("### 📊 Top Predictions")
+        st.markdown("### 📊 Top Predictions")
 
-top5 = crop_preds[:5]
-labels = [d.split("___")[1].replace("_", " ") for d, _ in top5]
-values = [v for _, v in top5]
+        top5 = crop_preds[:5]
+        labels = [d.split("___")[1].replace("_", " ") for d, _ in top5]
+        values = [v for _, v in top5]
 
-import pandas as pd
-chart_df = pd.DataFrame({
-    "Disease": labels,
-    "Confidence": values
-})
+        chart_df = pd.DataFrame({
+            "Disease": labels,
+            "Confidence": values
+        })
 
-st.bar_chart(chart_df.set_index("Disease"))
-
+        st.bar_chart(chart_df.set_index("Disease"))
 
         # -------- DISEASE INFO --------
         if disease in disease_data:
